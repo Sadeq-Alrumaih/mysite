@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, Fragment } from 'react';
 import { Sparkles, Moon, Star, BookOpen, Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
 
 export default function StoriesApp() {
@@ -14,6 +14,7 @@ export default function StoriesApp() {
     lesson: ''
   });
   const [story, setStory] = useState('');
+  const [images, setImages] = useState({ image1: null, image2: null });
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -72,6 +73,7 @@ export default function StoriesApp() {
       const data = await response.json();
       
       setStory(data.story);
+      setImages(data.images);
       setCurrentStep(6);
     } catch (error) {
       console.error('Error generating story:', error);
@@ -84,6 +86,7 @@ export default function StoriesApp() {
   const resetForm = () => {
     setCurrentStep(1);
     setStory('');
+    setImages({ image1: null, image2: null });
     setFormData({
       age: '',
       gender: '',
@@ -100,13 +103,18 @@ export default function StoriesApp() {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full mb-6">
             <Loader2 className="w-10 h-10 text-white animate-spin" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">جاري إنشاء القصة...</h2>
-          <p className="text-gray-600">Creating your magical story...</p>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">جاري إنشاء القصة والصور...</h2>
+          <p className="text-gray-600">Creating your magical story with images...</p>
         </div>
       );
     }
 
     if (currentStep === 6) {
+      const paragraphs = story.split('\n').filter(p => p.trim());
+      const totalParagraphs = paragraphs.length;
+      const image1Position = Math.floor(totalParagraphs * 0.3);
+      const image2Position = Math.floor(totalParagraphs * 0.75);
+
       return (
         <div className="bg-white rounded-3xl shadow-xl shadow-purple-100/50 overflow-hidden">
           <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-8 py-8 text-center">
@@ -127,12 +135,32 @@ export default function StoriesApp() {
                 fontSize: '1.125rem'
               }}
             >
-              {story.split('\n').map((paragraph, index) => (
-                paragraph.trim() && (
-                  <p key={index} className="mb-6">
-                    {paragraph}
-                  </p>
-                )
+              {paragraphs.map((paragraph, index) => (
+                <Fragment key={index}>
+                  <p className="mb-6">{paragraph}</p>
+                  
+                  {index === image1Position && images.image1 && (
+                    <div className="my-8 rounded-2xl overflow-hidden shadow-xl">
+                      <img 
+                        src={images.image1} 
+                        alt="مشهد من القصة" 
+                        className="w-full h-auto"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  
+                  {index === image2Position && images.image2 && (
+                    <div className="my-8 rounded-2xl overflow-hidden shadow-xl">
+                      <img 
+                        src={images.image2} 
+                        alt="مشهد من القصة" 
+                        className="w-full h-auto"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                </Fragment>
               ))}
             </div>
 

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { saveStory } from '@/lib/db';
 
 export async function POST(request) {
   try {
@@ -19,7 +20,13 @@ export async function POST(request) {
 3. استخدم لغة عربية فصحى بسيطة ومفهومة تناسب الفئة العمرية
 4. اجعل القصة طويلة وممتعة، بين 800-1000 كلمة على الأقل
 5. قسّم القصة إلى عدة فصول أو مشاهد، وطوّر الشخصيات والأحداث بشكل جيد
-6. تأكد من أن مستوى التعقيد والمفردات مناسبة للعمر`;
+6. تأكد من أن مستوى التعقيد والمفردات مناسبة للعمر
+
+بعد كتابة القصة، في نهاية ردك، أضف سطرين منفصلين:
+IMAGE_PROMPT_1: [وصف بالإنجليزية لمشهد كرتوني من بداية القصة - 30% من الأحداث]
+IMAGE_PROMPT_2: [وصف بالإنجليزية لمشهد كرتوني من منتصف/نهاية القصة - 75% من الأحداث]
+
+ملاحظة: وصف الصور يجب أن يكون بالإنجليزية، مفصل، ومناسب لأسلوب الرسوم المتحركة للأطفال (cartoon style).`;
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     
@@ -53,9 +60,47 @@ export async function POST(request) {
     }
 
     const data = await response.json();
-    const storyText = data.content[0].text;
+    const fullText = data.content[0].text;
     
-    return NextResponse.json({ story: storyText });
+    // Extract image prompts
+    const imagePrompt1Match = fullText.match(/IMAGE_PROMPT_1:\s*(.+)/);
+    const imagePrompt2Match = fullText.match(/IMAGE_PROMPT_2:\s*(.+)/);
+    
+    // Remove image prompts from story text
+    const storyText = fullText
+      .replace(/IMAGE_PROMPT_1:.+/g, '')
+      .replace(/IMAGE_PROMPT_2:.+/g, '')
+      .trim();
+    
+    // Generate image URLs using Pollinations.ai
+    const imageUrl1 = imagePrompt1Match 
+      ? `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt1Match[1].trim() + ', cartoon style, children illustration, colorful, friendly')}`
+      : null;
+      
+    const imageUrl2 = imagePrompt2Match 
+      ? `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt2Match[1].trim() + ', cartoon style, children illustration, colorful, friendly')}`
+      : null;
+    
+    // Save to database
+    const storyId = saveStory({
+      age,
+      gender,
+      interests,
+      style,
+      lesson,
+      story: storyText,
+      image1: imageUrl1,
+      image2: imageUrl2
+    });
+    
+    return NextResponse.json({ 
+      story: storyText,
+      images: {
+        image1: imageUrl1,
+        image2: imageUrl2
+      },
+      storyId
+    });
   } catch (error) {
     console.error('Error generating story:', error);
     return NextResponse.json(
